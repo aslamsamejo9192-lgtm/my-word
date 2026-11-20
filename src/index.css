@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', Calibri, 'Helvetica Neue', Arial, sans-serif;
+  background: #c8ccd0;
+  color: #1f2937;
+  overflow: hidden;
+}
+
+/* ---------- Word 2010 chrome ---------- */
+.titlebar {
+  background: linear-gradient(180deg, #4a90d9 0%, #2f6cb5 55%, #1f4e9c 100%);
+}
+
+.ribbon-tab-active {
+  background: #ffffff;
+  color: #1f4e9c;
+  border: 1px solid #b6c4d6;
+  border-bottom-color: #ffffff;
+}
+
+.ribbon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.15;
+  color: #1f2937;
+  cursor: pointer;
+  user-select: none;
+}
+.ribbon-btn:hover {
+  background: #dbeafe;
+  outline: 1px solid #93c5fd;
+}
+.ribbon-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ribbon-btn.is-active {
+  background: #bfdbfe;
+  outline: 1px solid #60a5fa;
+}
+.ribbon-btn.is-active:hover {
+  background: #93c5fd;
+}
+
+/* ---------- Rulers ---------- */
+.ruler-h {
+  background-color: #f3f4f6;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #9ca3af 0 1px,
+    transparent 1px 8px
+  );
+}
+.ruler-v {
+  background-color: #f3f4f6;
+  background-image: repeating-linear-gradient(
+    0deg,
+    #9ca3af 0 1px,
+    transparent 1px 8px
+  );
+}
+
+/* ---------- Tiptap / ProseMirror ---------- */
+.ProseMirror {
+  outline: none;
+  min-height: 100%;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+.ProseMirror p {
+  margin: 0 0 8px 0;
+}
+.ProseMirror h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 14px 0 8px;
+  color: #1f4e9c;
+}
+.ProseMirror h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 12px 0 6px;
+  color: #2f6cb5;
+}
+.ProseMirror h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 10px 0 6px;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 28px;
+  margin: 0 0 8px 0;
+}
+.ProseMirror ul {
+  list-style-type: disc;
+}
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+.ProseMirror blockquote {
+  border-left: 3px solid #93c5fd;
+  margin: 8px 0;
+  padding-left: 12px;
+  color: #374151;
+}
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid #9ca3af;
+  margin: 12px 0;
+}
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+  table-layout: fixed;
+}
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid #9ca3af;
+  padding: 6px 8px;
+  min-width: 60px;
+  vertical-align: top;
+}
+.ProseMirror th {
+  background: #dbeafe;
+  font-weight: 700;
+}
+.ProseMirror .selectedCell {
+  background: #bfdbfe;
+}
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+.ProseMirror mark {
+  background: #fde047;
+  color: inherit;
+}
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Page-break node shown on screen */
+.page-break-node {
+  border-top: 2px dashed #94a3b8;
+  margin: 18px 0;
+  position: relative;
+  break-before: page;
+  page-break-before: always;
+}
+.page-break-node::after {
+  content: 'Page Break';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f3f4f6;
+  color: #64748b;
+  font-size: 10px;
+  padding: 0 8px;
+}
+
+/* ---------- Print ---------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm;
+  }
+  body {
+    background: #fff !important;
+    overflow: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: auto !important;
+    min-height: auto !important;
+  }
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 11px;
+    color: #4b5563;
+  }
+  .print-footer .pg::after {
+    content: 'Page ' counter(page) ' of ' counter(pages);
+  }
+}
+
+/* ---------- Scrollbars ---------- */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- EditorView: page-number node ---------- */
+.page-number::before {
+  content: 'Page #';
+  color: #6b7280;
+  font-size: 11px;
+}
+@media print {
+  .page-number::before {
+    content: '';
+  }
+  .page-number::after {
+    content: counter(page);
+  }
+}
