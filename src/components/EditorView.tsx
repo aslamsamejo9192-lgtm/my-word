@@ -1523,14 +1523,14 @@ export default function EditorView(props: EditorViewProps) {
         <div
           ref={workspaceRef}
           className="relative min-w-0 flex-1 overflow-auto"
-          style={{ background: ps.background }}
+          style={{ background: ps.background, touchAction: 'pan-y' }}
         >
           {ps.showRuler && ps.view === 'print' && (
-            <div className="no-print sticky top-0 z-10 mx-auto" style={{ width: sheetWidth === '100%' ? '100%' : sheetWidth }}>
+            <div className="no-print sticky top-0 z-10 mx-auto" style={{ width: sheetWidth === '100%' ? '100%' : sheetWidth, maxWidth: '100%' }}>
               <div className="ruler-h h-5 w-full border-b border-slate-300" />
             </div>
           )}
-          <div className="flex justify-center py-6" style={{ zoom: zoom / 100 }}>
+          <div className="flex justify-center py-6" style={zoom === 100 ? undefined : { zoom: zoom / 100 }}>
             <div
               className="print-sheet relative bg-white"
               style={{

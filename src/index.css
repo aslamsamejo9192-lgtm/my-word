@@ -80,6 +80,9 @@ body {
   min-height: 100%;
   word-wrap: break-word;
   white-space: pre-wrap;
+  /* Phone fix: a vertical finger drag on the text must scroll the page
+     instead of being grabbed for text selection. */
+  touch-action: pan-y;
 }
 .ProseMirror p {
   margin: 0 0 8px 0;
