@@ -33,6 +33,7 @@ import {
   ClipboardPaste,
   Columns3,
   Copy,
+  FileDown,
   FilePlus,
   FileText,
   FolderOpen,
@@ -916,6 +917,17 @@ export default function EditorView(props: EditorViewProps) {
       .catch(() => alert('Could not export the .docx file.'))
   }, [buildDoc])
 
+  const exportAsPdf = useCallback(() => {
+    const doc = buildDoc()
+    if (!doc) return
+    const safeTitle = (doc.title || 'document').replace(/[\\/:*?"<>|]/g, '-').trim() || 'document'
+    // Lazy import: pdf-lib + fontkit only load when the user actually exports.
+    void import('../lib/pdfExport')
+      .then(({ exportPdf }) => exportPdf(doc))
+      .then((blob) => downloadBlob(blob, `${safeTitle}.pdf`))
+      .catch(() => alert('Could not export the PDF file.'))
+  }, [buildDoc])
+
   const renameTitle = useCallback(() => {
     const name = window.prompt('Rename document:', docStateRef.current.title)
     if (name && name.trim()) {
@@ -1107,6 +1119,9 @@ export default function EditorView(props: EditorViewProps) {
               </button>
               <button type="button" className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-blue-50" onClick={() => { setFileOpen(false); exportAsDocx() }}>
                 <FileText size={15} /> Export as DOCX
+              </button>
+              <button type="button" className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-blue-50" onClick={() => { setFileOpen(false); exportAsPdf() }}>
+                <FileDown size={15} /> Export as PDF
               </button>
               <button type="button" className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-blue-50" onClick={() => { setFileOpen(false); window.print() }}>
                 <Printer size={15} /> Export as PDF / Print…
