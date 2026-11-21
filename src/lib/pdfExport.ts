@@ -710,11 +710,16 @@ async function renderTable(w: Writer, node: AnyNode): Promise<void> {
   const avail = w.contentWidth
   const scale = total > avail ? avail / total : 1
   for (let i = 0; i < colCount; i++) colW[i] *= scale
+  // A single-column table has nothing to balance against: fill the content
+  // width, matching the editor (table width: 100%), instead of shrinking to
+  // the longest word (which made a 1x1 table a ~100pt strip).
+  if (colCount === 1) colW[0] = avail
 
   const PAD = 4
   const BORDER = rgb(0.6, 0.6, 0.6)
   const HEADER_FILL = rgb(217 / 255, 226 / 255, 243 / 255)
   const usableH = w.pageH - w.mT - w.mB
+  const lineH = (l: Line) => Math.max(l.maxSize * LINE_FACTOR, 10)
   for (let ri = 0; ri < grid.length; ri++) {
     const row = grid[ri]
     const isHeader = childNodes(rows[ri]).some((c) => c.type === 'tableHeader')
@@ -730,41 +735,108 @@ async function renderTable(w: Writer, node: AnyNode): Promise<void> {
       }
       if (lines.length === 0) lines.push({ atoms: [], width: 0, maxSize: 11 })
       cellLines.push(lines)
-      const h = lines.reduce((sum, l) => sum + Math.max(l.maxSize * LINE_FACTOR, 10), 0) + PAD * 2
+      const h = lines.reduce((sum, l) => sum + lineH(l), 0) + PAD * 2
       rowH = Math.max(rowH, h)
     }
-    // A row taller than a whole page is drawn as-is rather than paging forever.
-    if (rowH <= usableH) w.ensureSpace(rowH)
-    const top = w.yTop
-    let x = w.left
-    for (let ci = 0; ci < colCount; ci++) {
-      const cw = colW[ci]
-      if (isHeader) {
-        w.page.drawRectangle({ x, y: top - rowH, width: cw, height: rowH, color: HEADER_FILL })
-      }
-      let ly = top - PAD
-      for (const line of cellLines[ci]) {
-        const lineH = Math.max(line.maxSize * LINE_FACTOR, 10)
-        const baseline = ly - lineH + line.maxSize * 0.35
-        let lx = x + PAD
-        for (const a of line.atoms) {
-          if (a.kind !== 'word' && a.kind !== 'space') continue
-          if (a.kind === 'space') {
-            lx += a.width
-            continue
-          }
-          w.drawTextAtom(a, lx, baseline)
-          lx += a.width
+    // Draw one page-segment of this row: take[ci] lines of each cell starting
+    // at from[ci], inside a box of height segH whose top is segTop. The top
+    // padding applies only on the row's first segment; the bottom padding is
+    // already included in segH when the tallest cell finishes in this segment.
+    // Every segment gets its own full border, so each page shows a closed box.
+    const drawRowSegment = (from: number[], take: number[], segTop: number, segH: number, first: boolean) => {
+      let x = w.left
+      for (let ci = 0; ci < colCount; ci++) {
+        const cw = colW[ci]
+        if (isHeader) {
+          w.page.drawRectangle({ x, y: segTop - segH, width: cw, height: segH, color: HEADER_FILL })
         }
-        ly -= lineH
+        let ly = segTop - (first ? PAD : 0)
+        for (let k = 0; k < take[ci]; k++) {
+          const line = cellLines[ci][from[ci] + k]
+          const lh = lineH(line)
+          const baseline = ly - lh + line.maxSize * 0.35
+          let lx = x + PAD
+          for (const a of line.atoms) {
+            if (a.kind !== 'word' && a.kind !== 'space') continue
+            if (a.kind === 'space') {
+              lx += a.width
+              continue
+            }
+            w.drawTextAtom(a, lx, baseline)
+            lx += a.width
+          }
+          ly -= lh
+        }
+        w.page.drawLine({ start: { x, y: segTop }, end: { x: x + cw, y: segTop }, thickness: 0.5, color: BORDER })
+        w.page.drawLine({ start: { x, y: segTop - segH }, end: { x: x + cw, y: segTop - segH }, thickness: 0.5, color: BORDER })
+        w.page.drawLine({ start: { x, y: segTop }, end: { x, y: segTop - segH }, thickness: 0.5, color: BORDER })
+        w.page.drawLine({ start: { x: x + cw, y: segTop }, end: { x: x + cw, y: segTop - segH }, thickness: 0.5, color: BORDER })
+        x += cw
       }
-      w.page.drawLine({ start: { x, y: top }, end: { x: x + cw, y: top }, thickness: 0.5, color: BORDER })
-      w.page.drawLine({ start: { x, y: top - rowH }, end: { x: x + cw, y: top - rowH }, thickness: 0.5, color: BORDER })
-      w.page.drawLine({ start: { x, y: top }, end: { x, y: top - rowH }, thickness: 0.5, color: BORDER })
-      w.page.drawLine({ start: { x: x + cw, y: top }, end: { x: x + cw, y: top - rowH }, thickness: 0.5, color: BORDER })
-      x += cw
     }
-    w.yTop = top - rowH
+    if (rowH <= usableH) {
+      // Normal row: fits on one page (move to a fresh page if needed).
+      w.ensureSpace(rowH)
+      drawRowSegment(
+        cellLines.map(() => 0),
+        cellLines.map((ls) => ls.length),
+        w.yTop,
+        rowH,
+        true,
+      )
+      w.yTop -= rowH
+      continue
+    }
+    // A row taller than a whole page: split it across pages, drawing the
+    // cell border around every page segment so each page shows a closed box
+    // and no content is lost (previously it was drawn as-is off the page).
+    const from = cellLines.map(() => 0)
+    let first = true
+    for (;;) {
+      // Barely any room left on this page: start the segment on a fresh page
+      // instead of drawing a sliver box.
+      if (w.yTop - w.mB < PAD * 2 + 16) w.newPage()
+      const segTop = w.yTop
+      const segAvail = segTop - w.mB
+      const take: number[] = []
+      let segH = 0
+      for (let ci = 0; ci < colCount; ci++) {
+        const lines = cellLines[ci]
+        const remaining = lines.length - from[ci]
+        const topPad = first ? PAD : 0
+        const budget = segAvail - topPad
+        const restH = lines.slice(from[ci]).reduce((s, l) => s + lineH(l), 0)
+        let n: number
+        let sum: number
+        if (restH + PAD <= budget) {
+          // This cell finishes in this segment: include the bottom padding.
+          n = remaining
+          sum = restH
+          segH = Math.max(segH, topPad + sum + PAD)
+        } else {
+          n = 0
+          sum = 0
+          while (n < remaining && sum + lineH(lines[from[ci] + n]) <= budget) {
+            sum += lineH(lines[from[ci] + n])
+            n++
+          }
+          if (n === 0) {
+            // A single line taller than the budget: force progress (a line can
+            // never exceed a whole page, so this cannot loop forever).
+            n = 1
+            sum = lineH(lines[from[ci]])
+          }
+          segH = Math.max(segH, topPad + sum)
+        }
+        take.push(n)
+      }
+      drawRowSegment(from, take, segTop, segH, first)
+      for (let ci = 0; ci < colCount; ci++) from[ci] += take[ci]
+      w.yTop = segTop - segH
+      if (from.every((f, ci) => f >= cellLines[ci].length)) break
+      w.newPage()
+      first = false
+    }
   }
   w.yTop -= 6
 }

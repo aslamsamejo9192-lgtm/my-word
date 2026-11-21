@@ -223,6 +223,23 @@ body {
   .print-footer .pg::after {
     content: 'Page ' counter(page) ' of ' counter(pages);
   }
+  /* A tall table cell fragmented across printed pages must draw a CLOSED
+     border on every page fragment. With border-collapse: collapse the table
+     owns the borders and they are only drawn on the first/last fragment
+     (top on page 1, bottom on the last page, sides only in between).
+     border-collapse: separate gives each cell its own border, and
+     box-decoration-break: clone repaints it on every fragment. Verified
+     empirically with Playwright page.pdf: collapse+clone fails, separate
+     without clone fails, separate+clone passes on every page. */
+  .ProseMirror table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .ProseMirror th,
+  .ProseMirror td {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
 }
 
 /* ---------- Scrollbars ---------- */
