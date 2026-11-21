@@ -197,6 +197,11 @@ body {
     background: #fff !important;
     overflow: visible;
   }
+  .editor-root {
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
   .no-print {
     display: none !important;
   }

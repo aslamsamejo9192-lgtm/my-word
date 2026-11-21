@@ -1005,7 +1005,7 @@ export default function EditorView(props: EditorViewProps) {
   const chain = () => editor.chain().focus()
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#c8ccd0]">
+    <div className="editor-root fixed inset-0 flex flex-col overflow-hidden bg-[#c8ccd0]">
       {/* ---------- Title bar ---------- */}
       <div className="titlebar no-print flex h-9 shrink-0 items-center gap-2 px-2 text-white">
         <span className="text-sm font-semibold">My Word</span>
